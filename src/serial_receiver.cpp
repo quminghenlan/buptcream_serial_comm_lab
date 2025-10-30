@@ -38,12 +38,12 @@ inline T get_field(const uint8_t *buf,size_t &offset)
 
     crc16_.process_bytes(data, CRC_FIELD_SIZE);
     uint16_t computed_crc=crc16_.checksum();
-    crc16_.reset;
+    crc16_.reset();
 
     uint16_t received_crc=get_field<uint16_t>(data,offset);
     if (computed_crc!=received_crc)
     {
-        spdlog::warn("CRC mismatch: computed={:04X}, received={:04X}", computed_crc, received_crc);)
+        spdlog::warn("CRC mismatch: computed={:04X}, received={:04X}", computed_crc, received_crc);
         return false;
     }
 
@@ -55,7 +55,7 @@ inline T get_field(const uint8_t *buf,size_t &offset)
     return true;
 }
 
-SerialReceiver::SerialReceiver(const std::string&port_name,ImuMessageCallBack callback)
+SerialReceiver::SerialReceiver(const std::string&port_name,ImuMessageCallback callback)
 : serial_(ioc_, port_name), 
 callback_(callback)
 {
@@ -90,8 +90,8 @@ void SerialReceiver::do_read() {
 
 void SerialReceiver::start()
 {
-    do_read;
-    ioc_.run;
+    do_read();
+    ioc_.run();
 }
 
 
