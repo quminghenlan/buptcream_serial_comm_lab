@@ -23,6 +23,7 @@ inline T get_field(const uint8_t *buf,size_t &offset)
      return false;
 
     offset+=sizeof(uint32_t);
+    uint32_t id = get_field<uint32_t>(data, offset); // 
 
     ImuMessage msg;
         msg.quaternion.w = get_field<double>(data, offset);
@@ -38,12 +39,12 @@ inline T get_field(const uint8_t *buf,size_t &offset)
 
     crc16_.process_bytes(data, CRC_FIELD_SIZE);
     uint16_t computed_crc=crc16_.checksum();
-    crc16_.reset;
+    crc16_.reset();
 
     uint16_t received_crc=get_field<uint16_t>(data,offset);
     if (computed_crc!=received_crc)
     {
-        spdlog::warn("CRC mismatch: computed={:04X}, received={:04X}", computed_crc, received_crc);)
+        spdlog::warn("CRC mismatch: computed={:04X}, received={:04X}", computed_crc, received_crc);
         return false;
     }
 
@@ -67,31 +68,48 @@ callback_(callback)
 }
 
 void SerialReceiver::do_read() {
-    boost::asio::async_read(serial_, boost::asio::buffer(buffer_),
-        [this](const boost::system::error_code& ec, std::size_t /*bytes*/) 
-        {
+    recv_buffer_.resize(recv_buffer_.size() + 1);//
+    boost::asio::async_read(
+        serial_,  boost::asio::buffer(&recv_buffer_.back(), 1),
+        [this](const auto& ec, size_t) {
             if (!ec) {
-                if (parse_message(buffer_.data()))
-                {
-                    spdlog::debug("Received valid IMU message");
-                } 
-                else 
-                {
-                    spdlog::warn("Invalid message received");
-                }
-                do_read(); // 继续读下一帧
-            } 
-            else 
-            {
+                try_sync_and_parse();  // 尝试帧同步+解析
+                do_read();             // 继续读
+            } else {
                 spdlog::error("Read error: {}", ec.message());
             }
-        });
+        }
+    );
 }
+
+void SerialReceiver::try_sync_and_parse()//新增
+{
+    const size_t FRAME_SIZE = SERIAL_MSG_SIZE; // 88
+    while(recv_buffer_.size()>=FRAME_SIZE){
+        auto it=std::find(recv_buffer_.begin(),recv_buffer_.end()-FRAME_SIZE+1,
+                            static_cast<uint8_t>(SERIAL_MSG_HEAD));
+
+        if(it==recv_buffer_.begin()){//枕头在开头
+            if(parse_message(recv_buffer_.data())){
+                recv_buffer_.erase(recv_buffer_.begin(),recv_buffer_.begin()+FRAME_SIZE);
+                continue;
+            }else{// 解析失败
+                recv_buffer_.erase(recv_buffer_.begin());
+            }
+        }else if(it !=recv_buffer_.end()-FRAME_SIZE+1){// 找到帧头但不在开头，丢弃前面的数据
+            recv_buffer_.erase(recv_buffer_.begin(),it);
+        }else{// 没找到帧头，但缓冲区 >=88
+            recv_buffer_.erase(recv_buffer_.begin());
+        }
+    }
+}
+
+
 
 void SerialReceiver::start()
 {
-    do_read;
-    ioc_.run;
+    do_read();
+    ioc_.run();
 }
 
 

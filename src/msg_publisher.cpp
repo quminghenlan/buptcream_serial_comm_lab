@@ -17,8 +17,8 @@ public:
     this->declare_parameter<std::string>("serial_port", "/dev/ttyUSB0");
     std::string serial_port = this->get_parameter("serial_port").as_string();
 
-    receiver_thread_ = std::make_unique<std::thread>([this, serial_port]() {
-      serial_comm::SerialReceiver receiver(serial_port,
+    receiver_thread_ = std::thread([serial_port, this]() {
+      auto receiver = std::make_unique<serial_comm::SerialReceiver>(serial_port,
         [this](const serial_comm::ImuMessage& msg) {
           auto imu_msg = std::make_unique<sensor_msgs::msg::Imu>();
           
@@ -40,19 +40,20 @@ public:
 
           publisher_->publish(std::move(imu_msg));
         });
-      receiver.start();
+      receiver->start();
     });
   }
 
   ~ImuPublisherNode() {
-    if (receiver_thread_ && receiver_thread_->joinable()) {
+    if (receiver_thread_.joinable()) {
       receiver_thread_->detach();
     }
   }
 
 private:
-rclcpp::publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
-std::unique_ptr<std::thread>receiver_thread_; 
+  rclcpp::publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
+  //std::unique_ptr<std::thread>receiver_thread_; 
+  std::thread receiver_thread_;
 };
 
 
