@@ -75,15 +75,10 @@ void SerialSender::put_buf() {
 
 void SerialSender::do_send() {
   put_buf();
-
   /* simulate serial noise */
-
   if (dist_noise_(gen_) < 0.1) {
-
     buffer_[rand() % buffer_.size()] ^= 0xFF;
-
   }
-
 
   async_write(serial_, boost::asio::buffer(buffer_), [this](const boost::system::error_code &ec, std::size_t /*bytes_transferred*/) {
     if (!ec) {

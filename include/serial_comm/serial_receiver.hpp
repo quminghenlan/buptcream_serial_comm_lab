@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 #include <boost/asio.hpp>
+#include <boost/crc.hpp> 
 #include "serial_comm/message.hpp"
 
 namespace serial_comm {
@@ -13,7 +14,7 @@ using ImuMessageCallback = std::function<void(const ImuMessage&)>;
 
 class SerialReceiver {
   public:
-   SerialReceiver(const std::string&port_name,ImuMessageCallBack callback);
+   SerialReceiver(const std::string&port_name,ImuMessageCallback callback);
 
    SerialReceiver(const SerialReceiver &) = delete;
    SerialReceiver &operator=(const SerialReceiver &) = delete;

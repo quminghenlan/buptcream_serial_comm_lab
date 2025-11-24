@@ -56,7 +56,7 @@ inline T get_field(const uint8_t *buf,size_t &offset)
     return true;
 }
 
-SerialReceiver::SerialReceiver(const std::string&port_name,ImuMessageCallBack callback)
+SerialReceiver::SerialReceiver(const std::string&port_name,ImuMessageCallback callback)
 : serial_(ioc_, port_name), 
 callback_(callback)
 {
